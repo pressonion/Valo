@@ -361,7 +361,7 @@
                 <!-- Audio Settings -->
                 <div>
                     <div class="flex justify-between text-xs uppercase tracking-widest text-gray-400 mb-1 font-semibold">
-                        <span>Smooth Chime Hit Volume</span>
+                        <span>Hit Volume</span>
                         <span id="vol-val" class="text-[#00f0ff] font-mono">80%</span>
                     </div>
                     <input type="range" id="hit-volume" min="0" max="1" step="0.05" value="0.8" oninput="document.getElementById('vol-val').innerText = Math.round(this.value*100)+'%'; saveSettings();" class="w-full accent-[#00f0ff] cursor-pointer">
@@ -380,15 +380,15 @@
             </div>
             <div class="val-card p-6 w-full flex flex-col gap-4 text-xs text-gray-300">
                 <div class="flex items-start gap-3">
-                    <div class="bg-[#ff4655] text-white font-bold w-6 h-6 flex items-center justify-center rounded text-xs flex-shrink-0">1</div>
+                    <div class="bg-[#ff4655] text-[#ece8e1] font-bold w-6 h-6 flex items-center justify-center rounded text-xs flex-shrink-0">1</div>
                     <p>Click inside the 3D window to activate <strong class="text-[#00f0ff]">Pointer Lock FPS camera</strong> mode.</p>
                 </div>
                 <div class="flex items-start gap-3">
-                    <div class="bg-[#ff4655] text-white font-bold w-6 h-6 flex items-center justify-center rounded text-xs flex-shrink-0">2</div>
+                    <div class="bg-[#ff4655] text-[#ece8e1] font-bold w-6 h-6 flex items-center justify-center rounded text-xs flex-shrink-0">2</div>
                     <p><strong class="text-white">Aim-Train Orbs:</strong> Shoot glowing blue targets spawning across dynamic distances (3.5m to 28m).</p>
                 </div>
                 <div class="flex items-start gap-3">
-                    <div class="bg-[#ff4655] text-white font-bold w-6 h-6 flex items-center justify-center rounded text-xs flex-shrink-0">3</div>
+                    <div class="bg-[#ff4655] text-[#ece8e1] font-bold w-6 h-6 flex items-center justify-center rounded text-xs flex-shrink-0">3</div>
                     <p><strong class="text-white">Reaction Time:</strong> Keep your crosshair aligned with the sphere. Click immediately when it turns bright neon green!</p>
                 </div>
             </div>
@@ -492,7 +492,22 @@
     </div>
 
     <script>
-        // Web Audio API Engine for Smooth Tactile Sounds
+        // Pre-load custom kill sound files (valorant-1-kill.mp3 to valorant-5-kills.mp3)
+        const killSoundFiles = [
+            'valorant-1-kill.mp3',
+            'valorant-2-kills.mp3',
+            'valorant-3-kills.mp3',
+            'valorant-4-kills.mp3',
+            'valorant-5-kills.mp3'
+        ];
+
+        const loadedAudioElements = [];
+        killSoundFiles.forEach(file => {
+            const audio = new Audio(file);
+            audio.preload = 'auto';
+            loadedAudioElements.push(audio);
+        });
+
         let audioCtx = null;
         let streakCount = 0;
 
@@ -506,42 +521,46 @@
         }
 
         function playHitSound() {
-            if (!audioCtx) return;
             const masterVol = parseFloat(document.getElementById('hit-volume').value);
             if (masterVol <= 0) return;
 
-            streakCount++;
-            const pitchShift = Math.min(streakCount * 15, 120);
+            // Sequential 0->1->2->3->4 index cycling
+            const soundIndex = streakCount % loadedAudioElements.length;
+            const soundToPlay = loadedAudioElements[soundIndex];
 
-            // High Chime (Dink)
+            if (soundToPlay) {
+                const clone = soundToPlay.cloneNode();
+                clone.volume = masterVol;
+                clone.play().catch(err => {
+                    // Fallback synthesizer if MP3 files aren't loaded or local CORS blocks them
+                    playSynthesizedHit(masterVol, soundIndex);
+                });
+            } else {
+                playSynthesizedHit(masterVol, soundIndex);
+            }
+
+            // Increment streak count for next hit
+            streakCount++;
+        }
+
+        // Web Audio Synthesizer Fallback
+        function playSynthesizedHit(masterVol, index) {
+            if (!audioCtx) return;
+            const pitchShift = index * 40;
+
             const osc1 = audioCtx.createOscillator();
             const gain1 = audioCtx.createGain();
             osc1.type = 'sine';
             osc1.frequency.setValueAtTime(1050 + pitchShift, audioCtx.currentTime);
-            osc1.frequency.exponentialRampToValueAtTime(520, audioCtx.currentTime + 0.07);
+            osc1.frequency.exponentialRampToValueAtTime(520, audioCtx.currentTime + 0.08);
 
             gain1.gain.setValueAtTime(masterVol * 0.45, audioCtx.currentTime);
-            gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+            gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
 
             osc1.connect(gain1);
             gain1.connect(audioCtx.destination);
             osc1.start();
-            osc1.stop(audioCtx.currentTime + 0.07);
-
-            // Tactile Soft Click
-            const osc2 = audioCtx.createOscillator();
-            const gain2 = audioCtx.createGain();
-            osc2.type = 'triangle';
-            osc2.frequency.setValueAtTime(180, audioCtx.currentTime);
-            osc2.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.04);
-
-            gain2.gain.setValueAtTime(masterVol * 0.35, audioCtx.currentTime);
-            gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
-
-            osc2.connect(gain2);
-            gain2.connect(audioCtx.destination);
-            osc2.start();
-            osc2.stop(audioCtx.currentTime + 0.04);
+            osc1.stop(audioCtx.currentTime + 0.08);
         }
 
         function playMissSound() {
@@ -549,7 +568,7 @@
             const masterVol = parseFloat(document.getElementById('hit-volume').value);
             if (masterVol <= 0) return;
 
-            streakCount = 0;
+            streakCount = 0; // Reset sequence back to Kill 1 sound
 
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -920,7 +939,7 @@
             reactionState = 'waiting';
             const box = document.getElementById('reaction-status-box');
             box.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            document.getElementById('reaction-status-title').innerText = "WAITING FOR TARGET...";
+            document.getElementById('reaction-status-title').innerText = `TRIAL ${reactionTrials.length + 1} OF 5 - WAITING...`;
             document.getElementById('reaction-status-title').style.color = "#9ca3af";
             document.getElementById('reaction-status-sub').innerText = "DO NOT CLICK EARLY";
 
@@ -960,7 +979,7 @@
                 box.style.borderColor = '#ff4655';
                 document.getElementById('reaction-status-title').innerText = "TOO EARLY!";
                 document.getElementById('reaction-status-title').style.color = "#ff4655";
-                document.getElementById('reaction-status-sub').innerText = "RESETTING TARGET...";
+                document.getElementById('reaction-status-sub').innerText = "RESETTING TRIAL...";
 
                 reactionState = 'early';
                 setTimeout(() => {
@@ -1028,7 +1047,8 @@
         function triggerKillBanner() {
             const banner = document.getElementById('kill-banner');
             banner.classList.remove('hidden');
-            document.getElementById('kill-streak-txt').innerText = streakCount > 1 ? `ELIMINATED • STREAK ${streakCount}` : 'ELIMINATED';
+            const killNum = (streakCount % 5) === 0 ? 5 : (streakCount % 5);
+            document.getElementById('kill-streak-txt').innerText = `ELIMINATED • KILL ${killNum}`;
 
             setTimeout(() => {
                 banner.classList.add('hidden');
@@ -1104,6 +1124,7 @@
             isPaused = false;
             pitch = 0;
             yaw = 0;
+            streakCount = 0;
             camera.rotation.set(0, 0, 0);
 
             document.getElementById('ui-overlay').classList.add('hidden');
@@ -1113,7 +1134,6 @@
                 score = 0;
                 hits = 0;
                 totalShots = 0;
-                streakCount = 0;
                 gameTimer = 60.0;
 
                 spawnDynamicOrb();
