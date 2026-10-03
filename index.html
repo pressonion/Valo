@@ -56,10 +56,17 @@
             0% { transform: scale(0.6) translateY(20px); opacity: 0; }
             30% { transform: scale(1.1) translateY(0); opacity: 1; }
             70% { transform: scale(1) translateY(0); opacity: 1; }
-            100% { transform: scale(0.9) translateY(-10px); opacity: 0; }
+            100% { transform: scale(0.9) translateY(10px); opacity: 0; }
         }
         .animate-kill-banner {
             animation: killBannerPop 0.45s ease-out forwards;
+        }
+        @keyframes pulseWarning {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.03); }
+        }
+        .animate-pulse-warning {
+            animation: pulseWarning 0.5s infinite ease-in-out;
         }
     </style>
 </head>
@@ -73,21 +80,22 @@
         <canvas id="crosshairCanvas" width="120" height="120"></canvas>
     </div>
 
-    <!-- Valorant Kill Banner Notification -->
-    <div id="kill-banner" class="pointer-events-none fixed top-1/3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center hidden">
+    <!-- Valorant Kill Banner Image Notification -->
+    <div id="kill-banner" class="pointer-events-none fixed bottom-12 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center hidden">
         <div class="animate-kill-banner flex flex-col items-center">
-            <div class="px-4 py-1 bg-[#ff4655] text-white font-val text-2xl tracking-widest uppercase border border-white/40 shadow-lg">
-                HEADSHOT
-            </div>
-            <div id="kill-streak-txt" class="text-cyan-300 font-mono text-xs tracking-wider uppercase mt-1">
-                ELIMINATED
-            </div>
+            <img id="kill-banner-img" src="" alt="Kill Banner" class="max-w-[280px] h-auto drop-shadow-[0_0_15px_rgba(0,240,255,0.6)]" />
         </div>
     </div>
 
-    <!-- In-Game HUD Overlay (Aim-Train Orbs) -->
+    <!-- Strafing Stillness Warning Notification -->
+    <div id="strafe-warning-banner" class="pointer-events-none fixed top-1/4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center justify-center hidden">
+        <div id="strafe-warning-box" class="animate-pulse-warning px-6 py-2 bg-amber-500/90 text-black font-val text-3xl font-extrabold tracking-widest uppercase border-2 border-amber-300 shadow-2xl rounded">
+            WARNING: MOVE! YOU HAVE 2s TO STRAFE!
+        </div>
+    </div>
+
+    <!-- In-Game HUD Overlay (Aim-Train) -->
     <div id="hud-overlay" class="fixed inset-0 z-10 pointer-events-none flex flex-col justify-between p-6 hidden">
-        <!-- Top HUD Header -->
         <div class="flex justify-between items-start">
             <div class="flex gap-6 val-card p-4 pointer-events-auto border-l-4 border-l-[#ff4655]">
                 <div>
@@ -106,25 +114,22 @@
                 </div>
             </div>
 
-            <!-- Timer Box -->
             <div class="val-card p-4 text-center min-w-[150px] pointer-events-auto border-t-2 border-t-[#00f0ff]">
                 <div class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">REMAINING TIME</div>
                 <div id="hud-timer" class="font-val text-5xl text-[#ff4655] font-bold leading-none tracking-wider">60.0</div>
             </div>
 
-            <!-- FPS and Esc status -->
             <div class="val-card p-3 text-right pointer-events-auto border-r-4 border-r-[#00f0ff]">
                 <div id="hud-fps" class="text-xs text-cyan-400 font-mono font-bold">FPS: 60</div>
                 <div class="text-[11px] text-gray-400 mt-1">PRESS <span class="text-[#ff4655] font-bold">ESC</span> TO PAUSE</div>
             </div>
         </div>
 
-        <!-- Bottom Range Marker Overlay -->
         <div class="flex justify-center items-center gap-6">
             <div class="val-card px-4 py-1.5 text-xs font-mono text-gray-400 flex items-center gap-3 border border-white/10">
                 <span>RANGE DEPTH: <span id="hud-target-depth" class="text-[#00f0ff] font-bold">12.5m</span></span>
                 <span class="text-gray-600">|</span>
-                <span>MODE: <span class="text-[#ff4655] font-bold">AIM-TRAIN ORBS</span></span>
+                <span>MODE: <span id="hud-mode-title" class="text-[#ff4655] font-bold">AIM-TRAIN ORBS</span></span>
             </div>
         </div>
     </div>
@@ -163,6 +168,44 @@
         </div>
     </div>
 
+    <!-- Strafing Mode HUD Overlay -->
+    <div id="hud-strafe-overlay" class="fixed inset-0 z-10 pointer-events-none flex flex-col justify-between p-6 hidden">
+        <div class="flex justify-between items-start">
+            <div class="flex gap-6 val-card p-4 pointer-events-auto border-l-4 border-l-amber-400">
+                <div>
+                    <div class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">SCORE</div>
+                    <div id="hud-strafe-score" class="font-val text-4xl text-[#00f0ff] font-bold leading-none">0</div>
+                </div>
+                <div class="w-[1px] bg-white/10"></div>
+                <div>
+                    <div class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">TRACKING ACCURACY</div>
+                    <div id="hud-strafe-accuracy" class="font-val text-4xl text-emerald-400 font-bold leading-none">100%</div>
+                </div>
+                <div class="w-[1px] bg-white/10"></div>
+                <div>
+                    <div class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">STILLNESS TIMER</div>
+                    <div id="hud-strafe-stillness" class="font-val text-4xl text-amber-400 font-bold leading-none">0.0s / 4.0s</div>
+                </div>
+            </div>
+
+            <div class="val-card p-4 text-center min-w-[150px] pointer-events-auto border-t-2 border-t-amber-400">
+                <div class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">REMAINING TIME</div>
+                <div id="hud-strafe-timer" class="font-val text-5xl text-[#ff4655] font-bold leading-none tracking-wider">60.0</div>
+            </div>
+
+            <div class="val-card p-3 text-right pointer-events-auto border-r-4 border-r-amber-400">
+                <div class="text-xs text-cyan-400 font-mono font-bold" id="hud-strafe-fps">FPS: 60</div>
+                <div class="text-[11px] text-gray-400 mt-1">PRESS <span class="text-[#ff4655] font-bold">ESC</span> TO PAUSE</div>
+            </div>
+        </div>
+
+        <div class="flex justify-center items-center">
+            <div class="val-card px-6 py-2 text-center border border-amber-400/40">
+                <div class="text-xs text-amber-300 font-mono uppercase tracking-widest font-bold">USE [A] AND [D] TO STRAFE CONTINUOUSLY</div>
+            </div>
+        </div>
+    </div>
+
     <!-- UI Overlay Windows -->
     <div id="ui-overlay" class="relative z-20 w-full h-full flex items-center justify-center">
 
@@ -196,49 +239,66 @@
         </div>
 
         <!-- GAMEMODE SELECTION MENU -->
-        <div id="menu-gamemodes" class="hidden flex-col items-center justify-center gap-6 w-full max-w-2xl p-6">
+        <div id="menu-gamemodes" class="hidden flex-col items-center justify-center gap-6 w-full max-w-4xl p-6">
             <div class="text-center">
                 <h2 class="font-val text-6xl font-bold text-white uppercase tracking-wide">SELECT GAMEMODE</h2>
                 <p class="text-gray-400 text-xs tracking-widest uppercase">Choose your tactical drill</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
                 <!-- Mode 1: Aim-Train Orbs -->
-                <div onclick="selectModeAndStart('aim-train')" class="val-card p-6 flex flex-col justify-between cursor-pointer hover:border-[#00f0ff] transition border-l-4 border-l-[#00f0ff] group">
+                <div onclick="selectModeAndStart('aim-train')" class="val-card p-5 flex flex-col justify-between cursor-pointer hover:border-[#00f0ff] transition border-l-4 border-l-[#00f0ff] group">
                     <div>
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-[10px] font-mono uppercase bg-[#00f0ff]/20 text-[#00f0ff] px-2 py-0.5 rounded border border-[#00f0ff]/40">3D FLICKING</span>
-                            <span class="text-xs text-gray-500 font-mono">60 SECONDS</span>
+                            <span class="text-xs text-gray-500 font-mono">60s</span>
                         </div>
-                        <h3 class="font-val text-4xl text-white font-bold group-hover:text-[#00f0ff] transition">AIM-TRAIN ORBS</h3>
+                        <h3 class="font-val text-3xl text-white font-bold group-hover:text-[#00f0ff] transition">AIM-TRAIN ORBS</h3>
                         <p class="text-xs text-gray-400 mt-2 leading-relaxed">
-                            Shoot blue target orbs that spawn dynamically across various depths and angles. Tests wide flicking and precise micro-adjustments.
+                            Shoot dynamic target orbs spawning across dynamic depths and angles.
                         </p>
                     </div>
-                    <button class="val-btn text-lg font-val font-bold py-2 px-4 text-white uppercase tracking-widest mt-6 text-center w-full">
+                    <button class="val-btn text-base font-val font-bold py-2 px-4 text-white uppercase tracking-widest mt-6 text-center w-full">
                         LAUNCH DRILL
                     </button>
                 </div>
 
                 <!-- Mode 2: Reaction Time -->
-                <div onclick="selectModeAndStart('reaction-time')" class="val-card p-6 flex flex-col justify-between cursor-pointer hover:border-[#ff4655] transition border-l-4 border-l-[#ff4655] group">
+                <div onclick="selectModeAndStart('reaction-time')" class="val-card p-5 flex flex-col justify-between cursor-pointer hover:border-[#ff4655] transition border-l-4 border-l-[#ff4655] group">
                     <div>
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-[10px] font-mono uppercase bg-[#ff4655]/20 text-[#ff4655] px-2 py-0.5 rounded border border-[#ff4655]/40">SPEED TEST</span>
                             <span class="text-xs text-gray-500 font-mono">5 TRIALS</span>
                         </div>
-                        <h3 class="font-val text-4xl text-white font-bold group-hover:text-[#ff4655] transition">REACTION TIME</h3>
+                        <h3 class="font-val text-3xl text-white font-bold group-hover:text-[#ff4655] transition">REACTION TIME</h3>
                         <p class="text-xs text-gray-400 mt-2 leading-relaxed">
-                            Focus your crosshair on a dormant target sphere. When it flashes neon cyan, click as fast as possible to record your speed in milliseconds.
+                            Click as fast as possible when the dormant sphere flashes green.
                         </p>
                     </div>
-                    <button class="val-btn text-lg font-val font-bold py-2 px-4 text-white uppercase tracking-widest mt-6 text-center w-full">
+                    <button class="val-btn text-base font-val font-bold py-2 px-4 text-white uppercase tracking-widest mt-6 text-center w-full">
                         START SPEED TEST
+                    </button>
+                </div>
+
+                <!-- Mode 3: Strafing and on Target -->
+                <div onclick="selectModeAndStart('strafing')" class="val-card p-5 flex flex-col justify-between cursor-pointer hover:border-amber-400 transition border-l-4 border-l-amber-400 group">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] font-mono uppercase bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded border border-amber-400/40">MOVEMENT DRILL</span>
+                            <span class="text-xs text-gray-500 font-mono">60s</span>
+                        </div>
+                        <h3 class="font-val text-2xl text-white font-bold group-hover:text-amber-300 transition leading-tight">STRAFING AND ON TARGET</h3>
+                        <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+                            Keep moving with WASD while tracking a stationary central target. Standing still for >2s triggers warnings; >4s forfeits the game!
+                        </p>
+                    </div>
+                    <button class="val-btn text-base font-val font-bold py-2 px-4 text-white uppercase tracking-widest mt-6 text-center w-full">
+                        START STRAFE DRILL
                     </button>
                 </div>
             </div>
 
-            <button onclick="showScreen('menu-main')" class="val-card hover:border-gray-400 text-lg font-val font-bold py-2.5 px-8 text-gray-400 uppercase tracking-widest">
+            <button onclick="showScreen('menu-main')" class="val-card hover:border-gray-400 text-lg font-val font-bold py-2.5 px-8 text-gray-400 uppercase tracking-widest mt-2">
                 BACK TO MAIN MENU
             </button>
         </div>
@@ -251,8 +311,6 @@
             </div>
 
             <div class="val-card p-6 w-full flex flex-col gap-5 max-h-[68vh] overflow-y-auto">
-                
-                <!-- OS Selector Toggle -->
                 <div>
                     <label class="block text-[11px] uppercase tracking-widest text-gray-400 mb-2 font-bold">OPERATING SYSTEM POINTER ENGINE</label>
                     <div class="grid grid-cols-2 gap-3">
@@ -265,7 +323,6 @@
                     </div>
                 </div>
 
-                <!-- Windows Pointer Speed Slider (1 to 20) -->
                 <div id="win-slider-container">
                     <div class="flex justify-between text-xs uppercase tracking-widest text-gray-400 mb-1 font-semibold">
                         <span>Windows Cursor Speed Slider</span>
@@ -275,7 +332,6 @@
                     <div class="text-[10px] text-gray-500 mt-1">Default Windows slider notch is 10/20 (1.0x raw input multiplier).</div>
                 </div>
 
-                <!-- macOS Speed Slider (1 to 10) -->
                 <div id="mac-slider-container" class="hidden">
                     <div class="flex justify-between text-xs uppercase tracking-widest text-gray-400 mb-1 font-semibold">
                         <span>Apple Tracking Speed Notch</span>
@@ -286,7 +342,6 @@
 
                 <hr class="border-white/10">
 
-                <!-- Valorant In-Game Sensitivity & DPI -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <div class="text-xs uppercase tracking-widest text-gray-400 mb-1 font-semibold">
@@ -302,7 +357,6 @@
                     </div>
                 </div>
 
-                <!-- Calculated Effective Turn Metrics -->
                 <div class="p-3 bg-black/50 rounded border border-white/10 flex flex-col gap-1.5">
                     <div class="flex justify-between text-xs font-mono">
                         <span class="text-gray-400">Deg / Mouse Pixel:</span>
@@ -316,7 +370,6 @@
 
                 <hr class="border-white/10">
 
-                <!-- Target Orb Customization -->
                 <div>
                     <label class="block text-[11px] uppercase tracking-widest text-gray-400 mb-2 font-bold">TARGET ORB CONFIGURATION</label>
                     <div class="grid grid-cols-2 gap-4">
@@ -333,7 +386,6 @@
 
                 <hr class="border-white/10">
 
-                <!-- Crosshair Customizer -->
                 <div>
                     <label class="block text-[11px] uppercase tracking-widest text-gray-400 mb-2 font-bold">CROSSHAIR CUSTOMIZER</label>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -358,7 +410,6 @@
 
                 <hr class="border-white/10">
 
-                <!-- Audio Settings -->
                 <div>
                     <div class="flex justify-between text-xs uppercase tracking-widest text-gray-400 mb-1 font-semibold">
                         <span>Hit Volume</span>
@@ -385,11 +436,15 @@
                 </div>
                 <div class="flex items-start gap-3">
                     <div class="bg-[#ff4655] text-[#ece8e1] font-bold w-6 h-6 flex items-center justify-center rounded text-xs flex-shrink-0">2</div>
-                    <p><strong class="text-white">Aim-Train Orbs:</strong> Shoot glowing blue targets spawning across dynamic distances (3.5m to 28m).</p>
+                    <p><strong class="text-white">Aim-Train Orbs:</strong> Shoot glowing blue targets spawning across dynamic distances.</p>
                 </div>
                 <div class="flex items-start gap-3">
                     <div class="bg-[#ff4655] text-[#ece8e1] font-bold w-6 h-6 flex items-center justify-center rounded text-xs flex-shrink-0">3</div>
-                    <p><strong class="text-white">Reaction Time:</strong> Keep your crosshair aligned with the sphere. Click immediately when it turns bright neon green!</p>
+                    <p><strong class="text-white">Reaction Time:</strong> Click immediately when the target sphere flashes green!</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="bg-[#ff4655] text-[#ece8e1] font-bold w-6 h-6 flex items-center justify-center rounded text-xs flex-shrink-0">4</div>
+                    <p><strong class="text-white">Strafing and on Target:</strong> Use WASD to strafe back and forth continuously while firing into the stationary center orb. Do NOT stop moving!</p>
                 </div>
             </div>
             <button onclick="showScreen('menu-main')" class="val-btn text-lg font-val font-bold py-2.5 px-8 text-white uppercase tracking-widest">
@@ -416,7 +471,7 @@
             </div>
         </div>
 
-        <!-- RESULTS OVERLAY (Aim-Train Orbs) -->
+        <!-- RESULTS OVERLAY (Aim-Train) -->
         <div id="menu-results" class="hidden flex-col items-center justify-center gap-6 w-full max-w-lg p-6">
             <div class="text-center">
                 <div class="text-[#00f0ff] font-mono text-xs uppercase tracking-widest mb-1">DRILL COMPLETE</div>
@@ -474,7 +529,6 @@
                 <div class="text-left mt-2">
                     <div class="text-[10px] font-mono text-gray-400 uppercase tracking-wider mb-2">TRIAL BREAKDOWN (5 ATTEMPTS):</div>
                     <div id="res-react-history" class="grid grid-cols-5 gap-2 text-center font-mono text-xs">
-                        <!-- Filled dynamically -->
                     </div>
                 </div>
             </div>
@@ -489,21 +543,76 @@
             </div>
         </div>
 
+        <!-- RESULTS OVERLAY (Strafing and on Target) -->
+        <div id="menu-strafe-results" class="hidden flex-col items-center justify-center gap-6 w-full max-w-lg p-6">
+            <div class="text-center">
+                <div class="text-amber-300 font-mono text-xs uppercase tracking-widest mb-1">STRAFE DRILL COMPLETE</div>
+                <h2 id="res-strafe-title" class="font-val text-7xl font-bold text-white uppercase tracking-wide">STRAFE REPORT</h2>
+            </div>
+            
+            <div class="val-card p-6 w-full flex flex-col gap-4 text-center border-b-4 border-b-amber-400">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-white/5 rounded">
+                        <div class="text-[10px] uppercase text-gray-400 font-bold">TOTAL SCORE</div>
+                        <div id="res-strafe-score" class="font-val text-5xl text-amber-300 font-bold">0</div>
+                    </div>
+                    <div class="p-3 bg-white/5 rounded">
+                        <div class="text-[10px] uppercase text-gray-400 font-bold">ACCURACY</div>
+                        <div id="res-strafe-accuracy" class="font-val text-5xl text-emerald-400 font-bold">0%</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-white/5 rounded">
+                        <div class="text-[10px] uppercase text-gray-400 font-bold">HITS / SHOTS</div>
+                        <div id="res-strafe-hits" class="font-val text-4xl text-cyan-300 font-bold">0 / 0</div>
+                    </div>
+                    <div class="p-3 bg-white/5 rounded">
+                        <div class="text-[10px] uppercase text-gray-400 font-bold">STATUS</div>
+                        <div id="res-strafe-status" class="font-val text-4xl text-emerald-400 font-bold">COMPLETED</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-4 w-full">
+                <button onclick="startGame()" class="val-btn flex-1 text-2xl font-val font-bold py-3 text-white uppercase tracking-widest text-center">
+                    RETRY DRILL
+                </button>
+                <button onclick="showScreen('menu-gamemodes')" class="val-card flex-1 hover:border-white text-2xl font-val font-bold py-3 text-gray-300 uppercase tracking-widest text-center">
+                    GAMEMODES
+                </button>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // Pre-load custom kill sound files (valorant-1-kill.mp3 to valorant-5-kills.mp3)
-        const killSoundFiles = [
-            'valorant-1-kill.mp3',
-            'valorant-2-kills.mp3',
-            'valorant-3-kills.mp3',
-            'valorant-4-kills.mp3',
-            'valorant-5-kills.mp3'
+        const killAssets = [
+            {
+                audioPath: 'valorant kill banners/default_1_kill/default_1_kill_audio.mp3',
+                imgPath: 'valorant kill banners/default_1_kill/default_1_kill.png'
+            },
+            {
+                audioPath: 'valorant kill banners/default_2_kills/default_2_kills_audio.mp3',
+                imgPath: 'valorant kill banners/default_2_kills/default_2_kills.png'
+            },
+            {
+                audioPath: 'valorant kill banners/default_3_kills/default_3_kills_audio.mp3',
+                imgPath: 'valorant kill banners/default_3_kills/default_3_kills.png'
+            },
+            {
+                audioPath: 'valorant kill banners/default_4_kills/default_4_kills_audio.mp3',
+                imgPath: 'valorant kill banners/default_4_kills/default_4_kills.png'
+            },
+            {
+                audioPath: 'valorant kill banners/default_5_kills/default_5_kills_audio.mp3',
+                imgPath: 'valorant kill banners/default_5_kills/default_5_kills.png'
+            }
         ];
 
         const loadedAudioElements = [];
-        killSoundFiles.forEach(file => {
-            const audio = new Audio(file);
+        killAssets.forEach(asset => {
+            const audio = new Audio(asset.audioPath);
             audio.preload = 'auto';
             loadedAudioElements.push(audio);
         });
@@ -524,7 +633,6 @@
             const masterVol = parseFloat(document.getElementById('hit-volume').value);
             if (masterVol <= 0) return;
 
-            // Sequential 0->1->2->3->4 index cycling
             const soundIndex = streakCount % loadedAudioElements.length;
             const soundToPlay = loadedAudioElements[soundIndex];
 
@@ -532,18 +640,15 @@
                 const clone = soundToPlay.cloneNode();
                 clone.volume = masterVol;
                 clone.play().catch(err => {
-                    // Fallback synthesizer if MP3 files aren't loaded or local CORS blocks them
                     playSynthesizedHit(masterVol, soundIndex);
                 });
             } else {
                 playSynthesizedHit(masterVol, soundIndex);
             }
 
-            // Increment streak count for next hit
             streakCount++;
         }
 
-        // Web Audio Synthesizer Fallback
         function playSynthesizedHit(masterVol, index) {
             if (!audioCtx) return;
             const pitchShift = index * 40;
@@ -568,7 +673,7 @@
             const masterVol = parseFloat(document.getElementById('hit-volume').value);
             if (masterVol <= 0) return;
 
-            streakCount = 0; // Reset sequence back to Kill 1 sound
+            streakCount = 0;
 
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -585,7 +690,6 @@
             osc.stop(audioCtx.currentTime + 0.03);
         }
 
-        // Pointer Lock Rejection Handling
         function requestPointerLockSafely() {
             try {
                 const p = document.body.requestPointerLock();
@@ -599,7 +703,6 @@
             }
         }
 
-        // Windows 1-20 Multipliers
         const winMultipliers20 = {
             1: 0.03125, 2: 0.0625, 3: 0.125, 4: 0.25, 5: 0.375,
             6: 0.5, 7: 0.625, 8: 0.75, 9: 0.875, 10: 1.0,
@@ -607,7 +710,6 @@
             16: 2.5, 17: 2.75, 18: 3.0, 19: 3.25, 20: 3.5
         };
 
-        // Apple macOS 1-10 Multipliers
         const macMultipliers10 = {
             1: 0.1, 2: 0.3, 3: 0.5, 4: 0.75, 5: 1.0,
             6: 1.25, 7: 1.5, 8: 1.8, 9: 2.2, 10: 2.8
@@ -615,7 +717,7 @@
 
         let currentOS = 'windows';
         let effectiveSensDegreesPerPixel = 0.0315;
-        let selectedGamemode = 'aim-train'; // 'aim-train' or 'reaction-time'
+        let selectedGamemode = 'aim-train';
 
         function setOS(os) {
             currentOS = os;
@@ -735,7 +837,7 @@
         let previousScreen = 'menu-main';
 
         function showScreen(screenId) {
-            const screens = ['menu-main', 'menu-gamemodes', 'menu-settings', 'menu-instructions', 'menu-pause', 'menu-results', 'menu-reaction-results'];
+            const screens = ['menu-main', 'menu-gamemodes', 'menu-settings', 'menu-instructions', 'menu-pause', 'menu-results', 'menu-reaction-results', 'menu-strafe-results'];
             screens.forEach(s => {
                 const el = document.getElementById(s);
                 el.classList.add('hidden');
@@ -776,7 +878,12 @@
         let isPaused = false;
         let pitch = 0, yaw = 0;
 
-        // Mode 1 Stats
+        // Player WASD Movement Engine & Position
+        let playerPos = new THREE.Vector3(0, 0, 0);
+        let keysPressed = { KeyW: false, KeyS: false, KeyA: false, KeyD: false };
+        let stillnessTimer = 0.0;
+
+        // Shared Stats
         let score = 0;
         let hits = 0;
         let totalShots = 0;
@@ -784,7 +891,7 @@
         let timerInterval = null;
 
         // Mode 2: Reaction Time Engine Variables
-        let reactionState = 'idle'; // 'waiting', 'active', 'early'
+        let reactionState = 'idle';
         let reactionStartTime = 0;
         let reactionTimeout = null;
         let reactionTrials = [];
@@ -831,10 +938,20 @@
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mousedown', onMouseDown);
             document.addEventListener('pointerlockchange', onPointerLockChange);
+            
             document.addEventListener('keydown', (e) => {
+                if (e.code in keysPressed) {
+                    keysPressed[e.code] = true;
+                }
                 if (e.key === 'Escape' && isGameRunning) {
                     if (isPaused) resumeGame();
                     else pauseGame();
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                if (e.code in keysPressed) {
+                    keysPressed[e.code] = false;
                 }
             });
         }
@@ -915,6 +1032,30 @@
             document.getElementById('hud-target-depth').innerText = `${Math.abs(zDepth).toFixed(1)}m`;
         }
 
+        // Strafing Mode Fixed Blue Target Orb
+        function setupStrafingTarget() {
+            if (currentOrbMesh) {
+                targetGroup.remove(currentOrbMesh);
+                currentOrbMesh = null;
+            }
+
+            const baseRadius = parseFloat(document.getElementById('target-size-slider').value);
+            const orbGeo = new THREE.SphereGeometry(1, 32, 32);
+            
+            const orbMat = new THREE.MeshStandardMaterial({
+                color: 0x00f0ff,
+                emissive: 0x00a8ff,
+                emissiveIntensity: 0.9,
+                roughness: 0.15
+            });
+
+            currentOrbMesh = new THREE.Mesh(orbGeo, orbMat);
+            currentOrbMesh.scale.setScalar(baseRadius);
+            currentOrbMesh.position.set(0, 1.0, -12.5);
+
+            targetGroup.add(currentOrbMesh);
+        }
+
         // Reaction Time Target Mechanics
         function setupReactionTarget() {
             if (currentOrbMesh) {
@@ -933,7 +1074,7 @@
 
             currentOrbMesh = new THREE.Mesh(orbGeo, dormMat);
             currentOrbMesh.scale.setScalar(0.7);
-            currentOrbMesh.position.set(0, 1.0, -10.0); // Placed right in center
+            currentOrbMesh.position.set(0, 1.0, -10.0);
             targetGroup.add(currentOrbMesh);
 
             reactionState = 'waiting';
@@ -943,7 +1084,6 @@
             document.getElementById('reaction-status-title').style.color = "#9ca3af";
             document.getElementById('reaction-status-sub').innerText = "DO NOT CLICK EARLY";
 
-            // Delay between 1.5s to 5.0s
             const delay = Math.random() * 3500 + 1500;
             reactionTimeout = setTimeout(() => {
                 if (isGameRunning && !isPaused && selectedGamemode === 'reaction-time') {
@@ -971,7 +1111,6 @@
 
         function handleReactionClick(hitObject) {
             if (reactionState === 'waiting') {
-                // Clicked too early!
                 if (reactionTimeout) clearTimeout(reactionTimeout);
                 playMissSound();
 
@@ -1046,13 +1185,17 @@
 
         function triggerKillBanner() {
             const banner = document.getElementById('kill-banner');
+            const bannerImg = document.getElementById('kill-banner-img');
+            
+            const assetIndex = (streakCount - 1) % killAssets.length;
+            const currentAsset = killAssets[assetIndex];
+
+            bannerImg.src = currentAsset.imgPath;
             banner.classList.remove('hidden');
-            const killNum = (streakCount % 5) === 0 ? 5 : (streakCount % 5);
-            document.getElementById('kill-streak-txt').innerText = `ELIMINATED • KILL ${killNum}`;
 
             setTimeout(() => {
                 banner.classList.add('hidden');
-            }, 400);
+            }, 450);
         }
 
         function onMouseMove(e) {
@@ -1108,6 +1251,22 @@
                 raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
                 const intersects = raycaster.intersectObjects(targetGroup.children);
                 handleReactionClick(intersects.length > 0 ? intersects[0].object : null);
+
+            } else if (selectedGamemode === 'strafing') {
+                totalShots++;
+                raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+                const intersects = raycaster.intersectObjects(targetGroup.children);
+
+                if (intersects.length > 0) {
+                    hits++;
+                    score += 50;
+                    playHitSound();
+                    createHitParticles(intersects[0].object.position);
+                    triggerKillBanner();
+                } else {
+                    playMissSound();
+                }
+                updateStrafeHUD();
             }
         }
 
@@ -1118,6 +1277,13 @@
             document.getElementById('hud-accuracy').innerText = `${acc}%`;
         }
 
+        function updateStrafeHUD() {
+            document.getElementById('hud-strafe-score').innerText = score;
+            const acc = totalShots > 0 ? ((hits / totalShots) * 100).toFixed(1) : '100';
+            document.getElementById('hud-strafe-accuracy').innerText = `${acc}%`;
+            document.getElementById('hud-strafe-stillness').innerText = `${stillnessTimer.toFixed(1)}s / 4.0s`;
+        }
+
         function startGame() {
             initAudio();
             isGameRunning = true;
@@ -1125,9 +1291,16 @@
             pitch = 0;
             yaw = 0;
             streakCount = 0;
+            stillnessTimer = 0.0;
+            playerPos.set(0, 0, 0);
+            camera.position.set(0, 0, 0);
             camera.rotation.set(0, 0, 0);
 
+            camera.fov = 103;
+            camera.updateProjectionMatrix();
+
             document.getElementById('ui-overlay').classList.add('hidden');
+            document.getElementById('strafe-warning-banner').classList.add('hidden');
             document.getElementById('crosshair-container').classList.remove('hidden');
 
             if (selectedGamemode === 'aim-train') {
@@ -1136,11 +1309,14 @@
                 totalShots = 0;
                 gameTimer = 60.0;
 
+                document.getElementById('hud-mode-title').innerText = 'AIM-TRAIN ORBS';
+
                 spawnDynamicOrb();
                 updateHUD();
 
                 document.getElementById('hud-overlay').classList.remove('hidden');
                 document.getElementById('hud-reaction-overlay').classList.add('hidden');
+                document.getElementById('hud-strafe-overlay').classList.add('hidden');
 
                 if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
@@ -1162,8 +1338,34 @@
 
                 document.getElementById('hud-overlay').classList.add('hidden');
                 document.getElementById('hud-reaction-overlay').classList.remove('hidden');
+                document.getElementById('hud-strafe-overlay').classList.add('hidden');
 
                 setupReactionTarget();
+
+            } else if (selectedGamemode === 'strafing') {
+                score = 0;
+                hits = 0;
+                totalShots = 0;
+                gameTimer = 60.0;
+
+                setupStrafingTarget();
+                updateStrafeHUD();
+
+                document.getElementById('hud-overlay').classList.add('hidden');
+                document.getElementById('hud-reaction-overlay').classList.add('hidden');
+                document.getElementById('hud-strafe-overlay').classList.remove('hidden');
+
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    if (!isPaused && isGameRunning) {
+                        gameTimer -= 0.1;
+                        if (gameTimer <= 0) {
+                            gameTimer = 0;
+                            endStrafeGame(false);
+                        }
+                        document.getElementById('hud-strafe-timer').innerText = gameTimer.toFixed(1);
+                    }
+                }, 100);
             }
 
             requestPointerLockSafely();
@@ -1177,7 +1379,9 @@
 
             document.getElementById('hud-overlay').classList.add('hidden');
             document.getElementById('hud-reaction-overlay').classList.add('hidden');
+            document.getElementById('hud-strafe-overlay').classList.add('hidden');
             document.getElementById('crosshair-container').classList.add('hidden');
+            document.getElementById('strafe-warning-banner').classList.add('hidden');
             document.getElementById('ui-overlay').classList.remove('hidden');
             showScreen('menu-pause');
         }
@@ -1185,13 +1389,17 @@
         function resumeGame() {
             isPaused = false;
             document.getElementById('ui-overlay').classList.add('hidden');
-            document.getElementById('crosshair-container').classList.remove('hidden');
 
             if (selectedGamemode === 'aim-train') {
+                document.getElementById('crosshair-container').classList.remove('hidden');
                 document.getElementById('hud-overlay').classList.remove('hidden');
-            } else {
+            } else if (selectedGamemode === 'reaction-time') {
+                document.getElementById('crosshair-container').classList.remove('hidden');
                 document.getElementById('hud-reaction-overlay').classList.remove('hidden');
                 setupReactionTarget();
+            } else if (selectedGamemode === 'strafing') {
+                document.getElementById('crosshair-container').classList.remove('hidden');
+                document.getElementById('hud-strafe-overlay').classList.remove('hidden');
             }
 
             requestPointerLockSafely();
@@ -1206,7 +1414,9 @@
             document.exitPointerLock();
             document.getElementById('hud-overlay').classList.add('hidden');
             document.getElementById('hud-reaction-overlay').classList.add('hidden');
+            document.getElementById('hud-strafe-overlay').classList.add('hidden');
             document.getElementById('crosshair-container').classList.add('hidden');
+            document.getElementById('strafe-warning-banner').classList.add('hidden');
             document.getElementById('ui-overlay').classList.remove('hidden');
             showScreen('menu-main');
         }
@@ -1255,6 +1465,36 @@
             showScreen('menu-reaction-results');
         }
 
+        function endStrafeGame(disqualified = false) {
+            isGameRunning = false;
+            if (timerInterval) clearInterval(timerInterval);
+            document.exitPointerLock();
+
+            document.getElementById('res-strafe-score').innerText = score;
+            const acc = totalShots > 0 ? ((hits / totalShots) * 100).toFixed(1) : '0';
+            document.getElementById('res-strafe-accuracy').innerText = `${acc}%`;
+            document.getElementById('res-strafe-hits').innerText = `${hits} / ${totalShots}`;
+
+            const statusEl = document.getElementById('res-strafe-status');
+            const titleEl = document.getElementById('res-strafe-title');
+
+            if (disqualified) {
+                statusEl.innerText = "DISQUALIFIED";
+                statusEl.className = "font-val text-4xl text-[#ff4655] font-bold";
+                titleEl.innerText = "DRILL FORFEITED";
+            } else {
+                statusEl.innerText = "COMPLETED";
+                statusEl.className = "font-val text-4xl text-emerald-400 font-bold";
+                titleEl.innerText = "STRAFE REPORT";
+            }
+
+            document.getElementById('hud-strafe-overlay').classList.add('hidden');
+            document.getElementById('crosshair-container').classList.add('hidden');
+            document.getElementById('strafe-warning-banner').classList.add('hidden');
+            document.getElementById('ui-overlay').classList.remove('hidden');
+            showScreen('menu-strafe-results');
+        }
+
         function onPointerLockChange() {
             if (document.pointerLockElement !== document.body && isGameRunning && !isPaused) {
                 pauseGame();
@@ -1280,12 +1520,56 @@
                 const fpsText = `FPS: ${Math.round((frameCount * 1000) / (now - lastFrameTime))}`;
                 document.getElementById('hud-fps').innerText = fpsText;
                 document.getElementById('hud-reaction-fps').innerText = fpsText;
+                document.getElementById('hud-strafe-fps').innerText = fpsText;
                 frameCount = 0;
                 lastFrameTime = now;
             }
 
             if (isGameRunning && !isPaused) {
-                if (selectedGamemode === 'aim-train') {
+                if (selectedGamemode === 'strafing') {
+                    const moveSpeed = 8.0 * delta;
+                    let isMoving = false;
+
+                    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                    forward.y = 0;
+                    forward.normalize();
+
+                    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                    right.y = 0;
+                    right.normalize();
+
+                    if (keysPressed.KeyW) { playerPos.addScaledVector(forward, moveSpeed); isMoving = true; }
+                    if (keysPressed.KeyS) { playerPos.addScaledVector(forward, -moveSpeed); isMoving = true; }
+                    if (keysPressed.KeyA) { playerPos.addScaledVector(right, -moveSpeed); isMoving = true; }
+                    if (keysPressed.KeyD) { playerPos.addScaledVector(right, moveSpeed); isMoving = true; }
+
+                    playerPos.x = Math.max(-12, Math.min(12, playerPos.x));
+                    playerPos.z = Math.max(-15, Math.min(5, playerPos.z));
+
+                    camera.position.copy(playerPos);
+
+                    if (!isMoving) {
+                        stillnessTimer += delta;
+                    } else {
+                        stillnessTimer = 0.0;
+                    }
+
+                    const warnBanner = document.getElementById('strafe-warning-banner');
+                    const warnBox = document.getElementById('strafe-warning-box');
+
+                    if (stillnessTimer >= 4.0) {
+                        endStrafeGame(true);
+                    } else if (stillnessTimer >= 2.0) {
+                        const remaining = (4.0 - stillnessTimer).toFixed(1);
+                        warnBanner.classList.remove('hidden');
+                        warnBox.innerText = `CRITICAL: MOVE IMMEDIATELY! DISQUALIFYING IN ${remaining}s...`;
+                        warnBox.className = "animate-pulse-warning px-6 py-2 bg-[#ff4655] text-white font-val text-3xl font-extrabold tracking-widest uppercase border-2 border-white shadow-2xl rounded";
+                    } else {
+                        warnBanner.classList.add('hidden');
+                    }
+
+                    updateStrafeHUD();
+                } else if (selectedGamemode === 'aim-train') {
                     const targetLife = parseFloat(document.getElementById('target-life-slider').value);
                     if (targetLife > 0 && currentOrbMesh) {
                         if ((now - currentOrbMesh.userData.spawnTime) / 1000 > targetLife) {
