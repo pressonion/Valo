@@ -225,6 +225,9 @@
                 <button onclick="showScreen('menu-gamemodes')" class="val-btn text-3xl font-val font-bold py-4 px-8 text-white uppercase tracking-widest text-center shadow-lg">
                     PLAY
                 </button>
+                <button onclick="showScreen('menu-collection')" class="val-card hover:border-[#00f0ff] text-xl font-val font-bold py-3.5 px-8 text-gray-200 uppercase tracking-widest text-center transition">
+                    COLLECTION
+                </button>
                 <button onclick="showScreen('menu-settings')" class="val-card hover:border-[#00f0ff] text-xl font-val font-bold py-3.5 px-8 text-gray-200 uppercase tracking-widest text-center transition">
                     SETTINGS
                 </button>
@@ -236,6 +239,48 @@
             <div class="text-center text-xs text-gray-500 font-mono tracking-wider">
                 1:1 VALORANT MOUSE SCALING persistance enabled
             </div>
+        </div>
+
+        <!-- COLLECTION MENU -->
+        <div id="menu-collection" class="hidden flex-col items-center justify-center gap-6 w-full max-w-2xl p-6">
+            <div class="text-center">
+                <h2 class="font-val text-6xl font-bold text-white uppercase tracking-wide">COLLECTION</h2>
+                <p class="text-gray-400 text-xs tracking-widest uppercase">Select Kill Banner & Sound Set</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                <!-- Default Set -->
+                <div id="card-set-default" onclick="selectCollectionSet('default')" class="val-card p-6 flex flex-col justify-between cursor-pointer transition border-2 border-[#00f0ff] bg-white/5">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] font-mono uppercase bg-[#00f0ff]/20 text-[#00f0ff] px-2 py-0.5 rounded border border-[#00f0ff]/40">STANDARD</span>
+                            <span id="badge-set-default" class="text-xs font-mono font-bold text-emerald-400">EQUIPPED</span>
+                        </div>
+                        <h3 class="font-val text-3xl text-white font-bold">DEFAULT SET</h3>
+                        <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+                            Classic tactical sound effects and kill icons.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Kuronami Set -->
+                <div id="card-set-kuronami" onclick="selectCollectionSet('kuronami')" class="val-card p-6 flex flex-col justify-between cursor-pointer transition border-2 border-transparent hover:border-gray-500">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] font-mono uppercase bg-[#ff4655]/20 text-[#ff4655] px-2 py-0.5 rounded border border-[#ff4655]/40">PREMIUM</span>
+                            <span id="badge-set-kuronami" class="text-xs font-mono font-bold text-gray-500 hidden">EQUIPPED</span>
+                        </div>
+                        <h3 class="font-val text-3xl text-white font-bold">KURONAMI SET</h3>
+                        <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+                            Exclusive Kuronami kill banners and custom audio effects (1-5 kills).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="showScreen('menu-main')" class="val-btn text-lg font-val font-bold py-2.5 px-8 text-white uppercase tracking-widest mt-4">
+                BACK TO MENU
+            </button>
         </div>
 
         <!-- GAMEMODE SELECTION MENU -->
@@ -587,35 +632,63 @@
     </div>
 
     <script>
-        const killAssets = [
-            {
-                audioPath: 'valorant kill banners/default_1_kill/default_1_kill_audio.mp3',
-                imgPath: 'valorant kill banners/default_1_kill/default_1_kill.png'
-            },
-            {
-                audioPath: 'valorant kill banners/default_2_kills/default_2_kills_audio.mp3',
-                imgPath: 'valorant kill banners/default_2_kills/default_2_kills.png'
-            },
-            {
-                audioPath: 'valorant kill banners/default_3_kills/default_3_kills_audio.mp3',
-                imgPath: 'valorant kill banners/default_3_kills/default_3_kills.png'
-            },
-            {
-                audioPath: 'valorant kill banners/default_4_kills/default_4_kills_audio.mp3',
-                imgPath: 'valorant kill banners/default_4_kills/default_4_kills.png'
-            },
-            {
-                audioPath: 'valorant kill banners/default_5_kills/default_5_kills_audio.mp3',
-                imgPath: 'valorant kill banners/default_5_kills/default_5_kills.png'
-            }
-        ];
+        const killSets = {
+            default: [
+                { audioPath: 'valorant kill banners/default_1_kill/default_1_kill_audio.mp3', imgPath: 'valorant kill banners/default_1_kill/default_1_kill.png' },
+                { audioPath: 'valorant kill banners/default_2_kills/default_2_kills_audio.mp3', imgPath: 'valorant kill banners/default_2_kills/default_2_kills.png' },
+                { audioPath: 'valorant kill banners/default_3_kills/default_3_kills_audio.mp3', imgPath: 'valorant kill banners/default_3_kills/default_3_kills.png' },
+                { audioPath: 'valorant kill banners/default_4_kills/default_4_kills_audio.mp3', imgPath: 'valorant kill banners/default_4_kills/default_4_kills.png' },
+                { audioPath: 'valorant kill banners/default_5_kills/default_5_kills_audio.mp3', imgPath: 'valorant kill banners/default_5_kills/default_5_kills.png' }
+            ],
+            kuronami: [
+                { audioPath: 'valorant kill banners/kuronami_1_kill/kuronami_1_kill_audio.mp3', imgPath: 'valorant kill banners/kuronami_1_kill/kuronami_1_kill.png' },
+                { audioPath: 'valorant kill banners/kuronami_2_kills/kuronami_2_kills_audio.mp3', imgPath: 'valorant kill banners/kuronami_2_kills/kuronami_2_kills.png' },
+                { audioPath: 'valorant kill banners/kuronami_3_kills/kuronami_3_kills_audio.mp3', imgPath: 'valorant kill banners/kuronami_3_kills/kuronami_3_kills.png' },
+                { audioPath: 'valorant kill banners/kuronami_4_kills/kuronami_4_kills_audio.mp3', imgPath: 'valorant kill banners/kuronami_4_kills/kuronami_4_kills.png' },
+                { audioPath: 'valorant kill banners/kuronami_5_kills/kuronami_5_kills_audio.mp3', imgPath: 'valorant kill banners/kuronami_5_kills/kuronami_5_kills.png' }
+            ]
+        };
 
+        let selectedCollectionSet = 'default';
+        let killAssets = killSets.default;
         const loadedAudioElements = [];
-        killAssets.forEach(asset => {
-            const audio = new Audio(asset.audioPath);
-            audio.preload = 'auto';
-            loadedAudioElements.push(audio);
-        });
+
+        function preloadAudioSet(setName) {
+            loadedAudioElements.length = 0;
+            killAssets = killSets[setName] || killSets.default;
+            killAssets.forEach(asset => {
+                const audio = new Audio(asset.audioPath);
+                audio.preload = 'auto';
+                loadedAudioElements.push(audio);
+            });
+        }
+
+        function selectCollectionSet(setName) {
+            selectedCollectionSet = setName;
+            preloadAudioSet(setName);
+
+            const cardDefault = document.getElementById('card-set-default');
+            const cardKuronami = document.getElementById('card-set-kuronami');
+            const badgeDefault = document.getElementById('badge-set-default');
+            const badgeKuronami = document.getElementById('badge-set-kuronami');
+
+            if (setName === 'default') {
+                cardDefault.className = "val-card p-6 flex flex-col justify-between cursor-pointer transition border-2 border-[#00f0ff] bg-white/5";
+                cardKuronami.className = "val-card p-6 flex flex-col justify-between cursor-pointer transition border-2 border-transparent hover:border-gray-500";
+                badgeDefault.classList.remove('hidden');
+                badgeKuronami.classList.add('hidden');
+            } else {
+                cardKuronami.className = "val-card p-6 flex flex-col justify-between cursor-pointer transition border-2 border-[#ff4655] bg-white/5";
+                cardDefault.className = "val-card p-6 flex flex-col justify-between cursor-pointer transition border-2 border-transparent hover:border-gray-500";
+                badgeKuronami.classList.remove('hidden');
+                badgeDefault.classList.add('hidden');
+            }
+
+            saveSettings();
+        }
+
+        // Initialize audio preloading
+        preloadAudioSet('default');
 
         let audioCtx = null;
         let streakCount = 0;
@@ -754,7 +827,8 @@
                 crossSize: document.getElementById('crosshair-size').value,
                 crossThickness: document.getElementById('crosshair-thickness').value,
                 crossGap: document.getElementById('crosshair-gap').value,
-                volume: document.getElementById('hit-volume').value
+                volume: document.getElementById('hit-volume').value,
+                collectionSet: selectedCollectionSet
             };
             localStorage.setItem('valo_aim_config_v4', JSON.stringify(config));
         }
@@ -778,6 +852,9 @@
                 if (config.volume !== undefined) {
                     document.getElementById('hit-volume').value = config.volume;
                     document.getElementById('vol-val').innerText = Math.round(config.volume * 100) + '%';
+                }
+                if (config.collectionSet) {
+                    selectCollectionSet(config.collectionSet);
                 }
                 setOS(currentOS);
             } catch (e) {
@@ -837,7 +914,7 @@
         let previousScreen = 'menu-main';
 
         function showScreen(screenId) {
-            const screens = ['menu-main', 'menu-gamemodes', 'menu-settings', 'menu-instructions', 'menu-pause', 'menu-results', 'menu-reaction-results', 'menu-strafe-results'];
+            const screens = ['menu-main', 'menu-collection', 'menu-gamemodes', 'menu-settings', 'menu-instructions', 'menu-pause', 'menu-results', 'menu-reaction-results', 'menu-strafe-results'];
             screens.forEach(s => {
                 const el = document.getElementById(s);
                 el.classList.add('hidden');
@@ -1428,7 +1505,7 @@
 
             document.getElementById('res-score').innerText = score;
             const acc = totalShots > 0 ? ((hits / totalShots) * 100).toFixed(1) : '0';
-            document.getElementById('res-accuracy').innerText = `${acc}%`;
+            document.getElementById('res-[#res-accuracy]').innerText = `${acc}%`;
             document.getElementById('res-hits').innerText = hits;
             document.getElementById('res-shots').innerText = totalShots;
 
